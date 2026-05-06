@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 
 interface MapUploadProps {
-  onUpload: (imageUrl: string, width: number, height: number) => void
+  onUpload: (imageUrl: string, width: number, height: number, file?: File) => void
 }
 
 export default function MapUpload({ onUpload }: MapUploadProps) {
@@ -22,7 +22,7 @@ export default function MapUpload({ onUpload }: MapUploadProps) {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
-      onUpload(url, img.naturalWidth, img.naturalHeight)
+      onUpload(url, img.naturalWidth, img.naturalHeight, file)
     }
     img.src = url
   }

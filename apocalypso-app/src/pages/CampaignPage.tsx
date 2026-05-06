@@ -56,7 +56,7 @@ export default function CampaignPage() {
     endCombat,
   })
 
-  const { mapState, handleMapUpload, handleTokenMove, handleTokenSelect } = useMapState({ characters, addMessage })
+  const { mapState, handleMapUpload, handleTokenMove, handleTokenSelect, handleFogReveal } = useMapState({ campaignId: campaignId || '', characters, addMessage })
 
   function handleCharacterUpdate(charId: string, updates: Partial<import('@/types/character').Character>) {
     const { id: _id, ...data } = updates as Record<string, unknown>
@@ -193,7 +193,7 @@ export default function CampaignPage() {
 
         <div className="flex-1 relative bg-slate-950 overflow-hidden">
           {mapState ? (
-            <MapCanvas map={mapState} isGM={isGM} onTokenMove={handleTokenMove} onTokenSelect={handleTokenSelect} />
+            <MapCanvas map={mapState} isGM={isGM} onTokenMove={handleTokenMove} onTokenSelect={handleTokenSelect} onFogReveal={handleFogReveal} />
           ) : (
             <MapUpload onUpload={handleMapUpload} />
           )}
