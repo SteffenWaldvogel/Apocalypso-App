@@ -4,9 +4,11 @@ import type { ChatMessage } from '@/types/chat'
 interface ChatLogProps {
   messages: ChatMessage[]
   currentUserId: string
+  currentCharacterName?: string
+  isGM?: boolean
 }
 
-export default function ChatLog({ messages, currentUserId }: ChatLogProps) {
+export default function ChatLog({ messages, currentUserId, currentCharacterName, isGM }: ChatLogProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -19,13 +21,27 @@ export default function ChatLog({ messages, currentUserId }: ChatLogProps) {
         {messages.length === 0 && (
           <p className="text-center text-slate-500 text-sm mt-8">No messages yet.</p>
         )}
-        {messages.map((msg) => (
+        {messages
+          .filter((msg) => {
+            if (msg.type !== 'whisper') return true
+            if (isGM) return true
+            if (msg.senderId === currentUserId) return true
+            if (msg.recipientId === currentCharacterName) return true
+            return false
+          })
+          .map((msg) => (
           <MessageItem key={msg.id} message={msg} isOwn={msg.senderId === currentUserId} />
         ))}
         <div ref={bottomRef} />
       </div>
     </div>
   )
+}
+
+function formatTime(timestamp: unknown): string {
+  if (!timestamp) return ''
+  const date = typeof timestamp === 'number' ? new Date(timestamp) : (timestamp as { toDate?: () => Date }).toDate?.() ?? new Date()
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
 function MessageItem({ message, isOwn }: { message: ChatMessage; isOwn: boolean }) {
@@ -49,9 +65,10 @@ function MessageItem({ message, isOwn }: { message: ChatMessage; isOwn: boolean 
           rollResult.isNat1 ? 'bg-red-900/20 border-red-500/40' :
           'bg-slate-800 border-slate-700'
         }`}>
-          <p className="text-xs text-slate-400 mb-1">
-            {message.senderName} rolled
-          </p>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs text-slate-400">{message.senderName} rolled</p>
+            <span className="text-[10px] text-slate-600">{formatTime(message.timestamp)}</span>
+          </div>
           <p className="text-xs text-slate-500 font-mono">{rollResult.formula}</p>
           <div className="flex items-center gap-2 mt-1">
             <span className={`text-2xl font-bold ${
@@ -99,9 +116,10 @@ function MessageItem({ message, isOwn }: { message: ChatMessage; isOwn: boolean 
       <div className={`max-w-[280px] px-3 py-2 rounded-lg ${
         isOwn ? 'bg-violet-800/40 border border-violet-600/30' : 'bg-slate-800 border border-slate-700'
       }`}>
-        {!isOwn && (
-          <p className="text-xs text-slate-400 mb-0.5">{message.senderName}</p>
-        )}
+        <div className="flex items-baseline justify-between gap-2">
+          {!isOwn && <p className="text-xs text-slate-400">{message.senderName}</p>}
+          <span className="text-[10px] text-slate-600 ml-auto">{formatTime(message.timestamp)}</span>
+        </div>
         <p className="text-sm text-slate-200">{message.content}</p>
       </div>
     </div>

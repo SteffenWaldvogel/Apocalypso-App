@@ -13,6 +13,7 @@ export interface Campaign {
   settings: CampaignSettings
   createdAt: number
   lastSessionAt: number
+  memberIds: string[]
 }
 
 export interface CampaignMember {

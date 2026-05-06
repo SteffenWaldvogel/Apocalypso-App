@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { doc, setDoc, onSnapshot } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, arrayUnion, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuthStore } from '@/stores/authStore'
-import { useDoc, useCollection, useChatOps, useCombatOps } from '@/hooks/useFirestore'
+import { useDoc, useCollection, useChatOps, useCombatOps, useCharacterOps } from '@/hooks/useFirestore'
 import { useCampaignActions } from '@/hooks/useCampaignActions'
 import { useMapState } from '@/hooks/useMapState'
 import Panel from '@/components/layout/Panel'
@@ -31,6 +31,7 @@ export default function CampaignPage() {
   const { sendMessage } = useChatOps(campaignId || '')
   const { data: combatData } = useDoc<import('@/types/combat').CombatState>(campaignId ? `campaigns/${campaignId}/combat/state` : '')
   const { updateCombat, endCombat } = useCombatOps(campaignId || '')
+  const { updateCharacter } = useCharacterOps(campaignId || '')
 
   const combat: import('@/types/combat').CombatState = combatData
     ? { active: combatData.active, round: combatData.round, currentTurnIndex: combatData.currentTurnIndex, initiative: combatData.initiative }
@@ -57,6 +58,11 @@ export default function CampaignPage() {
 
   const { mapState, handleMapUpload, handleTokenMove, handleTokenSelect } = useMapState({ characters, addMessage })
 
+  function handleCharacterUpdate(charId: string, updates: Partial<import('@/types/character').Character>) {
+    const { id: _id, ...data } = updates as Record<string, unknown>
+    updateCharacter(charId, data)
+  }
+
   // Load member role — auto-register if not a member yet
   useEffect(() => {
     if (!campaignId || !user?.uid) return
@@ -70,6 +76,7 @@ export default function CampaignPage() {
           userId: user.uid, role,
           displayName: user.displayName || user.email || 'Unknown',
         })
+        await updateDoc(doc(db, `campaigns/${campaignId}`), { memberIds: arrayUnion(user.uid) })
         setMemberRole(role)
       }
     })
@@ -147,7 +154,7 @@ export default function CampaignPage() {
                 >
                   Edit in Character Editor
                 </button>
-                <CharacterSheet character={displayCharacter} editable={true} onRoll={handleStatRoll} onAttack={handleAttackRoll} />
+                <CharacterSheet character={displayCharacter} editable={true} onUpdate={(u) => handleCharacterUpdate(displayCharacter.id, u)} onRoll={handleStatRoll} onAttack={handleAttackRoll} />
               </>
             )}
           </div>
@@ -207,7 +214,7 @@ export default function CampaignPage() {
         <div className="flex flex-col h-full">
           <QuestSection />
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-            <ChatLog messages={messages} currentUserId={user?.uid || 'unknown'} />
+            <ChatLog messages={messages} currentUserId={user?.uid || 'unknown'} currentCharacterName={myCharacter?.identity.name} isGM={isGM} />
             <ChatInput onSend={handleSendMessage} onCommand={handleCommand} placeholder="Message or /roll 1d20+5..." />
           </div>
         </div>

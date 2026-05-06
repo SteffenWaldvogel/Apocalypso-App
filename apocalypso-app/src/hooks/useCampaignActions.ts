@@ -1,4 +1,4 @@
-import { rollDice } from '@/lib/dice'
+import { rollDice, rollWithAdvantage, rollWithDisadvantage } from '@/lib/dice'
 import { getLevel, getModifier } from '@/types/character'
 import type { Character, EquipmentItem } from '@/types/character'
 import type { ChatMessage, DiceRollResult } from '@/types/chat'
@@ -62,6 +62,28 @@ export function useCampaignActions({ userId, myCharacter, characters, isGM, addM
     if (command === 'roll' || command === 'r') {
       const result = rollDice(args || '1d20')
       handleRoll(result, args || '1d20')
+    } else if (command === 'adv' || command === 'advantage') {
+      const mod = args ? parseInt(args, 10) || 0 : 0
+      const result = rollWithAdvantage(mod)
+      handleRoll(result, 'Advantage')
+    } else if (command === 'dis' || command === 'disadvantage') {
+      const mod = args ? parseInt(args, 10) || 0 : 0
+      const result = rollWithDisadvantage(mod)
+      handleRoll(result, 'Disadvantage')
+    } else if ((command === 'w' || command === 'whisper') && args) {
+      // /w PlayerName message text
+      const spaceIdx = args.indexOf(' ')
+      if (spaceIdx > 0) {
+        const targetName = args.slice(0, spaceIdx)
+        const whisperText = args.slice(spaceIdx + 1)
+        addMessage({
+          senderId: userId,
+          senderName: myCharacter?.identity.name || 'Unknown',
+          type: 'whisper',
+          content: whisperText,
+          recipientId: targetName, // stored as name for now, filtered in ChatLog
+        })
+      }
     } else if (command === 'combat' && isGM) {
       const init = characters.map((c) => ({
         characterId: c.id,

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
+import { where } from 'firebase/firestore'
 import { auth } from '@/lib/firebase'
 import { useAuthStore } from '@/stores/authStore'
 import { useCollection, useCampaignOps } from '@/hooks/useFirestore'
@@ -10,12 +11,12 @@ export default function DashboardPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const { createCampaign, joinCampaign } = useCampaignOps()
-  const { data: campaigns, loading } = useCollection<Campaign>('campaigns')
+  const memberFilter = useMemo(() => user ? [where('memberIds', 'array-contains', user.uid)] : [], [user])
+  const { data: campaigns, loading } = useCollection<Campaign>('campaigns', undefined, undefined, memberFilter)
   const [joinCode, setJoinCode] = useState('')
   const [creating, setCreating] = useState(false)
   const [campaignName, setCampaignName] = useState('')
 
-  // Show all campaigns (small group — no need to filter heavily)
   const myCampaigns = campaigns
 
   async function handleCreate() {

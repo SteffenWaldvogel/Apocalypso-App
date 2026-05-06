@@ -49,3 +49,41 @@ export function rollAttack(toHit: number, statMod: number, skillBonus = 0): Dice
 export function rollSave(statMod: number, dc: number): DiceRollResult {
   return rollDice('1d20', statMod, dc)
 }
+
+export function rollWithAdvantage(modifier = 0, dc?: number): DiceRollResult {
+  const roll1 = new DiceRoll('1d20')
+  const roll2 = new DiceRoll('1d20')
+  const v1 = roll1.total
+  const v2 = roll2.total
+  const kept = Math.max(v1, v2)
+  const total = kept + modifier
+  return {
+    formula: modifier !== 0 ? `2d20kh1 + ${modifier}` : '2d20kh1',
+    rolls: [v1, v2],
+    total,
+    modifier,
+    isNat20: kept === 20,
+    isNat1: kept === 1,
+    vsDC: dc,
+    success: dc !== undefined ? total >= dc : undefined,
+  }
+}
+
+export function rollWithDisadvantage(modifier = 0, dc?: number): DiceRollResult {
+  const roll1 = new DiceRoll('1d20')
+  const roll2 = new DiceRoll('1d20')
+  const v1 = roll1.total
+  const v2 = roll2.total
+  const kept = Math.min(v1, v2)
+  const total = kept + modifier
+  return {
+    formula: modifier !== 0 ? `2d20kl1 + ${modifier}` : '2d20kl1',
+    rolls: [v1, v2],
+    total,
+    modifier,
+    isNat20: kept === 20,
+    isNat1: kept === 1,
+    vsDC: dc,
+    success: dc !== undefined ? total >= dc : undefined,
+  }
+}

@@ -11,7 +11,9 @@ import {
   orderBy,
   limit,
   serverTimestamp,
+  arrayUnion,
   type DocumentData,
+  type QueryConstraint,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Campaign } from '@/types/campaign'
@@ -45,7 +47,8 @@ export function useDoc<T>(path: string) {
 }
 
 // Listen to a collection
-export function useCollection<T>(path: string, orderField?: string, limitCount?: number) {
+export function useCollection<T>(path: string, orderField?: string, limitCount?: number, extraConstraints?: QueryConstraint[]) {
+  const constraintKey = extraConstraints ? JSON.stringify(extraConstraints.map(String)) : ''
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -53,7 +56,7 @@ export function useCollection<T>(path: string, orderField?: string, limitCount?:
   useEffect(() => {
     if (!path) { setLoading(false); return }
     const ref = collection(db, path)
-    const constraints = []
+    const constraints: QueryConstraint[] = [...(extraConstraints || [])]
     if (orderField) constraints.push(orderBy(orderField))
     if (limitCount) constraints.push(limit(limitCount))
 
@@ -71,7 +74,7 @@ export function useCollection<T>(path: string, orderField?: string, limitCount?:
       }
     )
     return unsubscribe
-  }, [path, orderField, limitCount])
+  }, [path, orderField, limitCount, constraintKey])
 
   return { data, loading, error }
 }
@@ -87,6 +90,7 @@ export function useCampaignOps() {
       settings: { diceMode: 'd20', defenseRolls: false, stressDie: false },
       createdAt: Date.now(),
       lastSessionAt: Date.now(),
+      memberIds: [gmId],
     } as Omit<Campaign, 'id'>)
     return ref.id
   }
@@ -96,6 +100,9 @@ export function useCampaignOps() {
       userId,
       role: 'player',
       displayName,
+    })
+    await updateDoc(doc(db, `campaigns/${campaignId}`), {
+      memberIds: arrayUnion(userId),
     })
   }
 

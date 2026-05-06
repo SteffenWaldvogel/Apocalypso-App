@@ -1,4 +1,4 @@
-import { doc, setDoc, updateDoc } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import type { Campaign } from '@/types/campaign'
 
@@ -11,13 +11,15 @@ interface JoinCampaignScreenProps {
 
 export default function JoinCampaignScreen({ campaign, campaignId, userId, displayName }: JoinCampaignScreenProps) {
   async function handleClaimGM() {
-    await updateDoc(doc(db, `campaigns/${campaignId}`), { gmId: userId })
+    if (campaign.gmId && campaign.gmId !== userId) return // prevent stealing GM from another user
+    await updateDoc(doc(db, `campaigns/${campaignId}`), { gmId: userId, memberIds: arrayUnion(userId) })
     await setDoc(doc(db, `campaigns/${campaignId}/members/${userId}`), {
       userId, role: 'gm', displayName: displayName || 'GM',
     })
   }
 
   async function handleJoinAsPlayer() {
+    await updateDoc(doc(db, `campaigns/${campaignId}`), { memberIds: arrayUnion(userId) })
     await setDoc(doc(db, `campaigns/${campaignId}/members/${userId}`), {
       userId, role: 'player', displayName: displayName || 'Player',
     })
