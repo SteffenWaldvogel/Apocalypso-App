@@ -10,10 +10,11 @@ interface CampaignActionsParams {
   characters: Character[]
   isGM: boolean
   addMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void
-  setCombat: React.Dispatch<React.SetStateAction<CombatState>>
+  updateCombat: (state: CombatState) => Promise<void>
+  endCombat: () => Promise<void>
 }
 
-export function useCampaignActions({ userId, myCharacter, characters, isGM, addMessage, setCombat }: CampaignActionsParams) {
+export function useCampaignActions({ userId, myCharacter, characters, isGM, addMessage, updateCombat, endCombat }: CampaignActionsParams) {
   function handleRoll(result: DiceRollResult, description: string) {
     addMessage({
       senderId: userId,
@@ -70,10 +71,10 @@ export function useCampaignActions({ userId, myCharacter, characters, isGM, addM
         isNpc: false,
       })).sort((a, b) => b.roll - a.roll || b.dexTiebreak - a.dexTiebreak)
 
-      setCombat({ active: true, round: 1, currentTurnIndex: 0, initiative: init })
+      updateCombat({ active: true, round: 1, currentTurnIndex: 0, initiative: init })
       addMessage({ senderId: 'system', senderName: 'System', type: 'system', content: 'Combat initiated. Roll for initiative.' })
     } else if (command === 'endcombat' && isGM) {
-      setCombat({ active: false, round: 0, currentTurnIndex: 0, initiative: [] })
+      endCombat()
       addMessage({ senderId: 'system', senderName: 'System', type: 'system', content: 'Combat ended.' })
     }
   }

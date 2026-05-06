@@ -135,19 +135,21 @@ export function useChatOps(campaignId: string) {
   return { sendMessage }
 }
 
-// Combat operations
+// Combat operations — single doc at campaigns/{id}/combat/state
 export function useCombatOps(campaignId: string) {
+  const combatDocPath = `campaigns/${campaignId}/combat/state`
+
   async function updateCombat(state: CombatState) {
-    await setDoc(doc(db, `campaigns/${campaignId}/combat`), state)
+    await setDoc(doc(db, combatDocPath), state)
   }
 
   async function endCombat() {
-    await setDoc(doc(db, `campaigns/${campaignId}/combat`), {
+    await setDoc(doc(db, combatDocPath), {
       active: false,
       round: 0,
       currentTurnIndex: 0,
       initiative: [],
-    })
+    } satisfies CombatState)
   }
 
   return { updateCombat, endCombat }

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { doc, setDoc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuthStore } from '@/stores/authStore'
-import { useDoc, useCollection, useChatOps } from '@/hooks/useFirestore'
+import { useDoc, useCollection, useChatOps, useCombatOps } from '@/hooks/useFirestore'
 import { useCampaignActions } from '@/hooks/useCampaignActions'
 import { useMapState } from '@/hooks/useMapState'
 import Panel from '@/components/layout/Panel'
@@ -18,7 +18,6 @@ import JoinCampaignScreen from '@/components/campaign/JoinCampaignScreen'
 import SelectCharacterScreen from '@/components/campaign/SelectCharacterScreen'
 import type { ChatMessage } from '@/types/chat'
 import type { Character } from '@/types/character'
-import type { CombatState } from '@/types/combat'
 import type { Campaign } from '@/types/campaign'
 
 export default function CampaignPage() {
@@ -30,9 +29,14 @@ export default function CampaignPage() {
   const { data: characters } = useCollection<Character>(campaignId ? `campaigns/${campaignId}/characters` : '')
   const { data: messages } = useCollection<ChatMessage>(campaignId ? `campaigns/${campaignId}/chat` : '', 'timestamp', 200)
   const { sendMessage } = useChatOps(campaignId || '')
+  const { data: combatData } = useDoc<import('@/types/combat').CombatState>(campaignId ? `campaigns/${campaignId}/combat/state` : '')
+  const { updateCombat, endCombat } = useCombatOps(campaignId || '')
+
+  const combat: import('@/types/combat').CombatState = combatData
+    ? { active: combatData.active, round: combatData.round, currentTurnIndex: combatData.currentTurnIndex, initiative: combatData.initiative }
+    : { active: false, round: 0, currentTurnIndex: 0, initiative: [] }
 
   const [myCharacter, setMyCharacter] = useState<Character | null>(null)
-  const [combat, setCombat] = useState<CombatState>({ active: false, round: 0, currentTurnIndex: 0, initiative: [] })
   const [memberRole, setMemberRole] = useState<'gm' | 'player' | null>(null)
 
   const isGM = campaign?.gmId === user?.uid || memberRole === 'gm'
@@ -47,7 +51,8 @@ export default function CampaignPage() {
     characters,
     isGM,
     addMessage,
-    setCombat,
+    updateCombat,
+    endCombat,
   })
 
   const { mapState, handleMapUpload, handleTokenMove, handleTokenSelect } = useMapState({ characters, addMessage })
@@ -167,12 +172,12 @@ export default function CampaignPage() {
           <div className="p-3 border-b border-slate-700 flex-shrink-0">
             <InitiativeTracker
               combat={combat}
-              onNextTurn={isGM ? () => setCombat((p) => {
-                const next = (p.currentTurnIndex + 1) % p.initiative.length
-                return { ...p, currentTurnIndex: next, round: next === 0 ? p.round + 1 : p.round }
-              }) : undefined}
+              onNextTurn={isGM ? () => {
+                const next = (combat.currentTurnIndex + 1) % combat.initiative.length
+                updateCombat({ ...combat, currentTurnIndex: next, round: next === 0 ? combat.round + 1 : combat.round })
+              } : undefined}
               onEndCombat={isGM ? () => {
-                setCombat({ active: false, round: 0, currentTurnIndex: 0, initiative: [] })
+                endCombat()
                 addMessage({ senderId: 'system', senderName: 'System', type: 'system', content: 'Combat ended.' })
               } : undefined}
             />
